@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cut">
+<meta name="theme-color" content="#5e504d">
+<link rel="icon" href="logo.jpg">
+<link rel="apple-touch-icon" href="logo.jpg">
+<title>仙度瑞拉 記帳本</title>
+<style>
+  :root {
+    --bg: #f4efed;
+    --card: #fffdfc;
+    --ink: #3a3231;
+    --muted: #8a7f7c;
+    --line: #e4dbd8;
+    --brand: #5e504d;
+    --brand-soft: #ebe2df;
+    --income: #4f7a5e;
+    --cost: #a9584a;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1d1a19; --card: #282423; --ink: #f1eae8; --muted: #a89e9b;
+      --line: #3b3533; --brand: #cdbcb6; --brand-soft: #3a3331;
+      --income: #8fc3a0; --cost: #e09484;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    font-size: 15px; line-height: 1.5;
+    padding-bottom: calc(90px + env(safe-area-inset-bottom));
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+  header h1 { font-size: 20px; margin: 0; letter-spacing: .12em; display: flex; align-items: center; gap: 10px;
+    font-family: "Noto Serif TC", "Songti TC", "PMingLiU", serif; font-weight: 600; }
+  header h1 img { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); }
+  header h1 small { display: block; font-size: 11px; letter-spacing: .2em; color: var(--muted); font-weight: 400; }
+  .icon-btn { background: none; border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; cursor: pointer; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
+  .stat small { color: var(--muted); display: block; font-size: 12px; }
+  .stat b { font-size: 17px; font-variant-numeric: tabular-nums; word-break: break-all; }
+  .pos { color: var(--income); } .neg { color: var(--cost); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin-bottom: 12px; }
+  .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .month-nav strong { font-size: 17px; }
+  .month-nav button { background: var(--brand-soft); border: 0; border-radius: 10px; width: 36px; height: 32px; cursor: pointer; font-size: 16px; }
+  .month-nav .today { width: auto; padding: 0 10px; font-size: 13px; }
+
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .cal .wd { text-align: center; font-size: 12px; color: var(--muted); padding: 4px 0; }
+  .day {
+    min-height: 62px; border-radius: 10px; border: 1px solid transparent; background: none;
+    padding: 4px 3px; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 1px;
+    font-size: 11px; font-variant-numeric: tabular-nums; overflow: hidden;
+  }
+  .day .n { font-size: 13px; font-weight: 600; }
+  .day.other { opacity: .35; }
+  .day.today .n { color: var(--brand); }
+  .day.sel { border-color: var(--brand); background: var(--brand-soft); }
+  .day:hover { background: var(--brand-soft); }
+
+  .day-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .day-head h2 { font-size: 16px; margin: 0; }
+  .mini { display: flex; gap: 12px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+  .mini b { font-variant-numeric: tabular-nums; }
+  ul.entries { list-style: none; padding: 0; margin: 8px 0 0; }
+  ul.entries li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+  .tag { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--brand-soft); white-space: nowrap; }
+  .entry-main { flex: 1; min-width: 0; }
+  .entry-main .note { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .amt { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .empty { color: var(--muted); font-size: 14px; padding: 10px 0 2px; }
+
+  .bars .row { display: grid; grid-template-columns: 76px 1fr 90px; gap: 8px; align-items: center; font-size: 13px; margin: 6px 0; }
+  .bars .track { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
+  .bars .fill { height: 100%; border-radius: 99px; }
+  .bars .v { text-align: right; font-variant-numeric: tabular-nums; }
+  .section-title { font-size: 14px; color: var(--muted); margin: 0 0 4px; }
+
+  .fab {
+    position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom));
+    width: 58px; height: 58px; border-radius: 50%; border: 0; background: var(--brand); color: #fff;
+    font-size: 30px; box-shadow: 0 6px 18px rgba(0,0,0,.2); cursor: pointer;
+  }
+
+  dialog { border: 0; border-radius: 18px; padding: 0; width: min(440px, calc(100vw - 32px)); background: var(--card); color: var(--ink); }
+  dialog::backdrop { background: rgba(20,10,14,.45); }
+  .dlg { padding: 18px; }
+  .dlg h3 { margin: 0 0 12px; font-size: 17px; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--bg); border-radius: 12px; padding: 4px; margin-bottom: 12px; }
+  .seg button { border: 0; background: none; padding: 8px; border-radius: 9px; cursor: pointer; }
+  .seg button.on[data-type="income"] { background: var(--income); color: #fff; }
+  .seg button.on[data-type="cost"] { background: var(--cost); color: #fff; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  input, select, textarea { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 10px; }
+  input.big { font-size: 22px; font-weight: 600; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips button { border: 1px solid var(--line); background: var(--bg); border-radius: 99px; padding: 5px 12px; cursor: pointer; font-size: 13px; }
+  .chips button.on { border-color: var(--brand); background: var(--brand-soft); }
+  .actions { display: flex; gap: 8px; margin-top: 16px; }
+  .actions button { flex: 1; padding: 11px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); cursor: pointer; }
+  .actions .primary { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .actions .danger { color: var(--cost); flex: 0 0 auto; }
+  .menu-list button { display: block; width: 100%; text-align: left; padding: 12px; border: 0; border-top: 1px solid var(--line); background: none; cursor: pointer; }
+  .menu-list button:first-child { border-top: 0; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><img src="logo.jpg" alt=""><span><span id="shopName">仙度瑞拉</span><small>Cinderella · 每日記帳</small></span></h1>
+    <button class="icon-btn" id="menuBtn" aria-label="選單">⋯</button>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><small>本月收入</small><b class="pos" id="mIncome">0</b></div>
+    <div class="stat"><small>本月成本</small><b class="neg" id="mCost">0</b></div>
+    <div class="stat"><small>本月淨利</small><b id="mNet">0</b></div>
+  </div>
+
+  <div class="card">
+    <div class="month-nav">
+      <button id="prevM" aria-label="上個月">‹</button>
+      <strong id="monthLabel"></strong>
+      <div style="display:flex;gap:6px">
+        <button class="today" id="todayBtn">今天</button>
+        <button id="nextM" aria-label="下個月">›</button>
+      </div>
+    </div>
+    <div class="cal" id="cal"></div>
+  </div>
+
+  <div class="card">
+    <div class="day-head">
+      <h2 id="dayTitle"></h2>
+    </div>
+    <div class="mini" id="dayMini"></div>
+    <ul class="entries" id="entries"></ul>
+  </div>
+
+  <div class="card">
+    <p class="section-title">本月分類統計</p>
+    <div class="bars" id="bars"></div>
+  </div>
+</div>
+
+<button class="fab" id="addBtn" aria-label="新增紀錄">＋</button>
+
+<dialog id="entryDlg">
+  <form class="dlg" method="dialog" id="entryForm">
+    <h3 id="entryTitle">新增紀錄</h3>
+    <div class="seg">
+      <button type="button" data-type="income">收入</button>
+      <button type="button" data-type="cost">成本</button>
+    </div>
+    <label for="fAmount">金額 (NT$)</label>
+    <input class="big" id="fAmount" type="number" inputmode="numeric" min="0" step="1" required>
+    <label>分類</label>
+    <div class="chips" id="fCats"></div>
+    <label for="fDate">日期</label>
+    <input id="fDate" type="date" required>
+    <label for="fNote">備註</label>
+    <input id="fNote" type="text" placeholder="例如：客人姓名、款式、廠商">
+    <div class="actions">
+      <button type="button" class="danger" id="delBtn">刪除</button>
+      <button type="button" id="cancelBtn">取消</button>
+      <button type="submit" class="primary">儲存</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="menuDlg">
+  <div class="dlg">
+    <h3>設定與備份</h3>
+    <div class="menu-list">
+      <button id="renameBtn">✏️ 修改店名</button>
+      <button id="exportCsvBtn">📊 匯出本月 CSV（可用 Excel 開）</button>
+      <button id="backupBtn">💾 下載完整備份 (JSON)</button>
+      <button id="restoreBtn">📂 從備份還原</button>
+    </div>
+    <p class="hint">資料只存在這台裝置的瀏覽器裡。清除瀏覽器資料或換手機前，請先下載備份。</p>
+    <div class="actions"><button type="button" id="closeMenu">關閉</button></div>
+    <input type="file" id="restoreFile" accept="application/json,.json" hidden>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  const KEY = 'nail-ledger-v1';
+  const CATS = {
+    income: ['手部凝膠', '足部凝膠', '卸甲', '保養', '延甲', '熱蠟除毛', '商品', '其他收入'],
+    cost:   ['材料', '耗材', '房租', '水電', '設備', '行銷', '交通', '其他支出'],
+  };
+
+  // ---------- storage ----------
+  function load() {
+    try {
+      const d = JSON.parse(localStorage.getItem(KEY));
+      if (d && Array.isArray(d.entries)) return d;
+    } catch (e) {}
+    return { shopName: '仙度瑞拉', entries: [] };
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(db)); }
+    catch (e) { alert('儲存失敗：瀏覽器可能不允許本機儲存。'); }
+  }
+  let db = load();
+
+  // ---------- helpers ----------
+  const $ = id => document.getElementById(id);
+  const pad = n => String(n).padStart(2, '0');
+  const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const money = n => 'NT$' + Math.round(n).toLocaleString('zh-TW');
+  const short = n => n >= 10000 ? (n / 1000).toFixed(n >= 100000 ? 0 : 1) + 'k' : n.toLocaleString('zh-TW');
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function sum(list) {
+    let income = 0, cost = 0;
+    for (const e of list) e.type === 'income' ? income += e.amount : cost += e.amount;
+    return { income, cost, net: income - cost };
+  }
+  const byDate = date => db.entries.filter(e => e.date === date);
+  const byMonth = (y, m) => { const p = `${y}-${pad(m + 1)}-`; return db.entries.filter(e => e.date.startsWith(p)); };
+
+  // ---------- state ----------
+  const now = new Date();
+  let viewY = now.getFullYear(), viewM = now.getMonth();
+  let selected = ymd(now);
+
+  // ---------- render ----------
+  function render() {
+    $('shopName').textContent = db.shopName;
+    document.title = db.shopName + ' 記帳本';
+    $('monthLabel').textContent = `${viewY} 年 ${viewM + 1} 月`;
+
+    const ms = sum(byMonth(viewY, viewM));
+    $('mIncome').textContent = money(ms.income);
+    $('mCost').textContent = money(ms.cost);
+    $('mNet').textContent = money(ms.net);
+    $('mNet').className = ms.net >= 0 ? 'pos' : 'neg';
+
+    // calendar
+    const cal = $('cal');
+    cal.innerHTML = '日一二三四五六'.split('').map(w => `<div class="wd">${w}</div>`).join('');
+    const first = new Date(viewY, viewM, 1);
+    const start = new Date(viewY, viewM, 1 - first.getDay());
+    const todayStr = ymd(new Date());
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      if (i === 35 && d.getMonth() !== viewM) break; // 不需要第 6 列
+      const ds = ymd(d);
+      const s = sum(byDate(ds));
+      const btn = document.createElement('button');
+      btn.className = 'day' + (d.getMonth() !== viewM ? ' other' : '') + (ds === todayStr ? ' today' : '') + (ds === selected ? ' sel' : '');
+      btn.innerHTML = `<span class="n">${d.getDate()}</span>` +
+        (s.income ? `<span class="pos">+${short(s.income)}</span>` : '') +
+        (s.cost ? `<span class="neg">-${short(s.cost)}</span>` : '');
+      btn.onclick = () => {
+        selected = ds;
+        if (d.getMonth() !== viewM) { viewY = d.getFullYear(); viewM = d.getMonth(); }
+        render();
+      };
+      cal.appendChild(btn);
+    }
+
+    // selected day
+    const [sy, sm, sd] = selected.split('-').map(Number);
+    const wk = '日一二三四五六'[new Date(sy, sm - 1, sd).getDay()];
+    $('dayTitle').textContent = `${sm} 月 ${sd} 日（${wk}）`;
+    const list = byDate(selected).sort((a, b) => a.type.localeCompare(b.type) || a.created - b.created);
+    const ds = sum(list);
+    $('dayMini').innerHTML = `<span>收入 <b class="pos">${money(ds.income)}</b></span><span>成本 <b class="neg">${money(ds.cost)}</b></span><span>淨利 <b class="${ds.net >= 0 ? 'pos' : 'neg'}">${money(ds.net)}</b></span>`;
+    $('entries').innerHTML = list.length ? list.map(e => `
+      <li data-id="${e.id}" style="cursor:pointer">
+        <span class="tag">${esc(e.category)}</span>
+        <div class="entry-main"><div class="note">${esc(e.note || '—')}</div></div>
+        <span class="amt ${e.type === 'income' ? 'pos' : 'neg'}">${e.type === 'income' ? '+' : '-'}${money(e.amount)}</span>
+      </li>`).join('') : '<li class="empty" style="border:0">這天還沒有紀錄，按右下角 ＋ 新增。</li>';
+    $('entries').querySelectorAll('li[data-id]').forEach(li => li.onclick = () => openEntry(db.entries.find(e => e.id === li.dataset.id)));
+
+    // category bars
+    const cats = {};
+    for (const e of byMonth(viewY, viewM)) {
+      const k = e.type + '|' + e.category;
+      cats[k] = (cats[k] || 0) + e.amount;
+    }
+    const rows = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+    const max = Math.max(1, ...rows.map(r => r[1]));
+    $('bars').innerHTML = rows.length ? rows.map(([k, v]) => {
+      const [type, cat] = k.split('|');
+      const color = type === 'income' ? 'var(--income)' : 'var(--cost)';
+      return `<div class="row"><span>${esc(cat)}</span><div class="track"><div class="fill" style="width:${(v / max * 100).toFixed(1)}%;background:${color}"></div></div><span class="v ${type === 'income' ? 'pos' : 'neg'}">${money(v)}</span></div>`;
+    }).join('') : '<div class="empty">本月還沒有資料。</div>';
+  }
+
+  // ---------- entry dialog ----------
+  let editing = null, fType = 'income', fCat = '';
+  function setType(t) {
+    fType = t;
+    document.querySelectorAll('.seg button').forEach(b => b.classList.toggle('on', b.dataset.type === t));
+    if (!CATS[t].includes(fCat)) fCat = CATS[t][0];
+    $('fCats').innerHTML = CATS[t].map(c => `<button type="button" class="${c === fCat ? 'on' : ''}">${c}</button>`).join('');
+    $('fCats').querySelectorAll('button').forEach(b => b.onclick = () => { fCat = b.textContent; setType(fType); });
+  }
+  function openEntry(e) {
+    editing = e || null;
+    $('entryTitle').textContent = e ? '編輯紀錄' : '新增紀錄';
+    $('delBtn').style.display = e ? '' : 'none';
+    fCat = e ? e.category : '';
+    setType(e ? e.type : 'income');
+    $('fAmount').value = e ? e.amount : '';
+    $('fDate').value = e ? e.date : selected;
+    $('fNote').value = e ? e.note : '';
+    $('entryDlg').showModal();
+    if (!e) $('fAmount').focus();
+  }
+  document.querySelectorAll('.seg button').forEach(b => b.onclick = () => setType(b.dataset.type));
+  $('addBtn').onclick = () => openEntry();
+  $('cancelBtn').onclick = () => $('entryDlg').close();
+  $('entryForm').onsubmit = ev => {
+    ev.preventDefault();
+    const amount = Math.round(Number($('fAmount').value));
+    if (!(amount > 0)) { $('fAmount').focus(); return; }
+    const data = { type: fType, category: fCat, amount, date: $('fDate').value, note: $('fNote').value.trim() };
+    if (editing) Object.assign(editing, data);
+    else db.entries.push({ id: uid(), created: Date.now(), ...data });
+    selected = data.date;
+    const [y, m] = data.date.split('-').map(Number);
+    viewY = y; viewM = m - 1;
+    save(); render();
+    $('entryDlg').close();
+  };
+  $('delBtn').onclick = () => {
+    if (!editing || !confirm('確定刪除這筆紀錄？')) return;
+    db.entries = db.entries.filter(e => e !== editing);
+    save(); render();
+    $('entryDlg').close();
+  };
+
+  // ---------- nav ----------
+  function shiftMonth(n) {
+    const d = new Date(viewY, viewM + n, 1);
+    viewY = d.getFullYear(); viewM = d.getMonth();
+    selected = ymd(d);
+    render();
+  }
+  $('prevM').onclick = () => shiftMonth(-1);
+  $('nextM').onclick = () => shiftMonth(1);
+  $('todayBtn').onclick = () => { const t = new Date(); viewY = t.getFullYear(); viewM = t.getMonth(); selected = ymd(t); render(); };
+
+  // ---------- menu ----------
+  function download(name, text, mime) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: mime }));
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  $('menuBtn').onclick = () => $('menuDlg').showModal();
+  $('closeMenu').onclick = () => $('menuDlg').close();
+  $('renameBtn').onclick = () => {
+    const n = prompt('店名', db.shopName);
+    if (n && n.trim()) { db.shopName = n.trim(); save(); render(); }
+  };
+  $('exportCsvBtn').onclick = () => {
+    const rows = byMonth(viewY, viewM).sort((a, b) => a.date.localeCompare(b.date));
+    const q = s => `"${String(s).replace(/"/g, '""')}"`;
+    const csv = '﻿日期,類型,分類,金額,備註\n' +
+      rows.map(e => [e.date, e.type === 'income' ? '收入' : '成本', q(e.category), e.amount, q(e.note)].join(',')).join('\n');
+    download(`${db.shopName}_${viewY}-${pad(viewM + 1)}.csv`, csv, 'text/csv');
+  };
+  $('backupBtn').onclick = () => download(`${db.shopName}_備份_${ymd(new Date())}.json`, JSON.stringify(db, null, 2), 'application/json');
+  $('restoreBtn').onclick = () => $('restoreFile').click();
+  $('restoreFile').onchange = async ev => {
+    const f = ev.target.files[0];
+    if (!f) return;
+    try {
+      const d = JSON.parse(await f.text());
+      if (!d || !Array.isArray(d.entries)) throw 0;
+      if (!confirm(`備份內有 ${d.entries.length} 筆紀錄，還原會覆蓋目前資料，確定？`)) return;
+      db = { shopName: d.shopName || '仙度瑞拉', entries: d.entries };
+      save(); render();
+      $('menuDlg').close();
+    } catch (e) { alert('這個檔案不是有效的備份。'); }
+    ev.target.value = '';
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>
